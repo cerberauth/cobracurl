@@ -2,6 +2,7 @@
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/cerberauth/cobracurl/ci.yml?branch=main&label=core%20build&style=for-the-badge)](https://github.com/cerberauth/cobracurl/actions/workflows/ci.yml)
 ![Latest version](https://img.shields.io/github/v/release/cerberauth/cobracurl?sort=semver&style=for-the-badge)
+![Codecov](https://img.shields.io/codecov/c/gh/cerberauth/cobracurl?token=BD1WPXJDAW&style=for-the-badge)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cerberauth/cobracurl?style=for-the-badge)](https://goreportcard.com/report/github.com/cerberauth/cobracurl)
 [![GoDoc reference](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=for-the-badge)](https://godoc.org/github.com/cerberauth/cobracurl)
 
