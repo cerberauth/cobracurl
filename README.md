@@ -2,8 +2,8 @@
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/cerberauth/cobracurl/ci.yml?branch=main&label=core%20build&style=for-the-badge)](https://github.com/cerberauth/cobracurl/actions/workflows/ci.yml)
 ![Latest version](https://img.shields.io/github/v/release/cerberauth/cobracurl?sort=semver&style=for-the-badge)
-[![Github Repo Stars](https://img.shields.io/github/stars/cerberauth/cobracurl?style=for-the-badge)](https://github.com/cerberauth/cobracurl)
-![License](https://img.shields.io/github/license/cerberauth/cobracurl?style=for-the-badge)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cerberauth/cobracurl?style=for-the-badge)](https://goreportcard.com/report/github.com/cerberauth/cobracurl)
+[![GoDoc reference](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=for-the-badge)](https://godoc.org/github.com/cerberauth/cobracurl)
 
 **cobracurl** is a Go package that helps you build HTTP requests from Cobra CLI commands — perfect for developers converting `curl` commands into reproducible CLI tools.
 
