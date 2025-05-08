@@ -82,6 +82,34 @@ func TestBuildRequest(t *testing.T) {
 				"user":    "admin",
 			},
 		},
+		{
+			name: "Request with user agent",
+			flags: map[string]interface{}{
+				"method":     "GET",
+				"url":        "http://example.com",
+				"user-agent": "MyUserAgent/1.0",
+			},
+			expectedError:  nil,
+			expectedURL:    "http://example.com",
+			expectedMethod: "GET",
+			expectedHeaders: map[string]string{
+				"User-Agent": "MyUserAgent/1.0",
+			},
+		},
+		{
+			name: "Request with basic auth",
+			flags: map[string]interface{}{
+				"method": "GET",
+				"url":    "http://example.com",
+				"user":   "username:password",
+			},
+			expectedError:  nil,
+			expectedURL:    "http://example.com",
+			expectedMethod: "GET",
+			expectedHeaders: map[string]string{
+				"Authorization": "Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
+			},
+		},
 	}
 
 	for _, tt := range tests {
