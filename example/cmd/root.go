@@ -13,7 +13,7 @@ var rootCmd = &cobra.Command{
 	Use:   "cobracurl-demo",
 	Short: "A demo CLI for sending HTTP requests using cobracurl",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		req, err := cobracurl.BuildRequest(cmd)
+		req, err := cobracurl.BuildRequest(cmd, args)
 		if err != nil {
 			return err
 		}

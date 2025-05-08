@@ -41,7 +41,7 @@ func init() {
 cmd := &cobra.Command{
     Use: "send",
     RunE: func(cmd *cobra.Command, args []string) error {
-        req, err := cobracurl.BuildRequest(cmd)
+        req, err := cobracurl.BuildRequest(cmd, args)
         if err != nil {
             return err
         }
@@ -79,7 +79,7 @@ func RegisterFlags(flags *pflag.FlagSet)
 Register the flags for HTTP method, URL, headers, and body. This function should be called in the `init()` function of your Cobra command.
 
 ```go
-func BuildRequest(cmd *cobra.Command) (*http.Request, error)
+func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error)
 ```
 
 Builds an `*http.Request` object based on the flags set in the Cobra command. It returns an error if any required flags are missing or if the request cannot be created.

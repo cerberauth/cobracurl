@@ -9,9 +9,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func BuildRequest(cmd *cobra.Command) (*http.Request, error) {
+func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 	method, _ := cmd.Flags().GetString("method")
 	url, _ := cmd.Flags().GetString("url")
+	if url == "" && len(args) > 0 {
+		url = args[0]
+	}
 
 	if method == "" || url == "" {
 		return nil, ErrMissingRequiredFields

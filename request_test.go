@@ -13,6 +13,7 @@ func TestBuildRequest(t *testing.T) {
 	tests := []struct {
 		name            string
 		flags           map[string]interface{}
+		args            []string
 		expectedError   error
 		expectedURL     string
 		expectedMethod  string
@@ -26,13 +27,36 @@ func TestBuildRequest(t *testing.T) {
 				"method": "GET",
 				"url":    "http://example.com",
 			},
+			args:           []string{},
 			expectedError:  nil,
 			expectedURL:    "http://example.com",
 			expectedMethod: "GET",
 		},
 		{
+			name: "Valid GET request with URL",
+			flags: map[string]interface{}{
+				"method": "GET",
+			},
+			args:           []string{"http://example.com"},
+			expectedError:  nil,
+			expectedURL:    "http://example.com",
+			expectedMethod: "GET",
+		},
+		{
+			name: "Valid POST request with URL",
+			flags: map[string]interface{}{
+				"method": "POST",
+				"url":    "http://example.com",
+			},
+			args:           []string{},
+			expectedError:  nil,
+			expectedURL:    "http://example.com",
+			expectedMethod: "POST",
+		},
+		{
 			name:          "Missing method and URL",
 			flags:         map[string]interface{}{},
+			args:          []string{},
 			expectedError: ErrMissingRequiredFields,
 		},
 		{
@@ -43,6 +67,7 @@ func TestBuildRequest(t *testing.T) {
 				"body":   "key=value",
 				"header": []string{"Content-Type: application/json", "Authorization: Bearer token"},
 			},
+			args:           []string{},
 			expectedError:  nil,
 			expectedURL:    "http://example.com",
 			expectedMethod: "POST",
@@ -59,6 +84,7 @@ func TestBuildRequest(t *testing.T) {
 				"url":    "http://example.com",
 				"form":   map[string]string{"key1": "value1", "key2": "value2"},
 			},
+			args:           []string{},
 			expectedError:  nil,
 			expectedURL:    "http://example.com",
 			expectedMethod: "POST",
@@ -74,6 +100,7 @@ func TestBuildRequest(t *testing.T) {
 				"url":    "http://example.com",
 				"cookie": []string{"session=abc123", "user=admin"},
 			},
+			args:           []string{},
 			expectedError:  nil,
 			expectedURL:    "http://example.com",
 			expectedMethod: "GET",
@@ -89,6 +116,7 @@ func TestBuildRequest(t *testing.T) {
 				"url":        "http://example.com",
 				"user-agent": "MyUserAgent/1.0",
 			},
+			args:           []string{},
 			expectedError:  nil,
 			expectedURL:    "http://example.com",
 			expectedMethod: "GET",
@@ -103,6 +131,7 @@ func TestBuildRequest(t *testing.T) {
 				"url":    "http://example.com",
 				"user":   "username:password",
 			},
+			args:           []string{},
 			expectedError:  nil,
 			expectedURL:    "http://example.com",
 			expectedMethod: "GET",
@@ -126,7 +155,7 @@ func TestBuildRequest(t *testing.T) {
 				}
 			}
 
-			req, err := BuildRequest(cmd)
+			req, err := BuildRequest(cmd, tt.args)
 
 			if !errors.Is(err, tt.expectedError) {
 				t.Errorf("expected error %v, got %v", tt.expectedError, err)
