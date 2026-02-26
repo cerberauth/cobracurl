@@ -3,6 +3,7 @@ package cobracurl
 import (
 	"errors"
 	"io"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -173,7 +174,7 @@ func TestBuildRequest(t *testing.T) {
 				if tt.expectedBody != "" {
 					body := new(strings.Builder)
 					_, _ = io.Copy(body, req.Body)
-					if body.String() != tt.expectedBody {
+					if !bodiesEqual(body.String(), tt.expectedBody) {
 						t.Errorf("expected body %s, got %s", tt.expectedBody, body.String())
 					}
 				}
@@ -192,4 +193,30 @@ func TestBuildRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+// bodiesEqual compares two request bodies. For URL-encoded bodies it parses
+// them into url.Values so that key order does not matter.
+func bodiesEqual(a, b string) bool {
+	va, errA := url.ParseQuery(a)
+	vb, errB := url.ParseQuery(b)
+	if errA == nil && errB == nil && len(va) > 0 && len(vb) > 0 {
+		// Compare as parsed values, ignoring key order.
+		if len(va) != len(vb) {
+			return false
+		}
+		for k, vals := range va {
+			bVals, ok := vb[k]
+			if !ok || len(vals) != len(bVals) {
+				return false
+			}
+			for i := range vals {
+				if vals[i] != bVals[i] {
+					return false
+				}
+			}
+		}
+		return true
+	}
+	return a == b
 }
