@@ -1,6 +1,6 @@
 module github.com/cerberauth/cobracurl/example
 
-go 1.24
+go 1.26
 
 replace github.com/cerberauth/cobracurl v0.0.0 => ../
 
