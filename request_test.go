@@ -24,7 +24,7 @@ func TestBuildRequest(t *testing.T) {
 		{
 			name: "Valid GET request",
 			flags: map[string]interface{}{
-				"method": "GET",
+				"request": "GET",
 				"url":    "http://example.com",
 			},
 			args:           []string{},
@@ -35,7 +35,7 @@ func TestBuildRequest(t *testing.T) {
 		{
 			name: "Valid GET request with URL",
 			flags: map[string]interface{}{
-				"method": "GET",
+				"request": "GET",
 			},
 			args:           []string{"http://example.com"},
 			expectedError:  nil,
@@ -45,7 +45,7 @@ func TestBuildRequest(t *testing.T) {
 		{
 			name: "Valid POST request with URL",
 			flags: map[string]interface{}{
-				"method": "POST",
+				"request": "POST",
 				"url":    "http://example.com",
 			},
 			args:           []string{},
@@ -62,7 +62,7 @@ func TestBuildRequest(t *testing.T) {
 		{
 			name: "POST request with body and headers",
 			flags: map[string]interface{}{
-				"method": "POST",
+				"request": "POST",
 				"url":    "http://example.com",
 				"body":   "key=value",
 				"header": []string{"Content-Type: application/json", "Authorization: Bearer token"},
@@ -80,7 +80,7 @@ func TestBuildRequest(t *testing.T) {
 		{
 			name: "Form data with headers",
 			flags: map[string]interface{}{
-				"method": "POST",
+				"request": "POST",
 				"url":    "http://example.com",
 				"form":   map[string]string{"key1": "value1", "key2": "value2"},
 			},
@@ -96,7 +96,7 @@ func TestBuildRequest(t *testing.T) {
 		{
 			name: "Request with cookies",
 			flags: map[string]interface{}{
-				"method": "GET",
+				"request": "GET",
 				"url":    "http://example.com",
 				"cookie": []string{"session=abc123", "user=admin"},
 			},
@@ -112,7 +112,7 @@ func TestBuildRequest(t *testing.T) {
 		{
 			name: "Request with user agent",
 			flags: map[string]interface{}{
-				"method":     "GET",
+				"request":     "GET",
 				"url":        "http://example.com",
 				"user-agent": "MyUserAgent/1.0",
 			},
@@ -127,7 +127,7 @@ func TestBuildRequest(t *testing.T) {
 		{
 			name: "Request with basic auth",
 			flags: map[string]interface{}{
-				"method": "GET",
+				"request": "GET",
 				"url":    "http://example.com",
 				"user":   "username:password",
 			},

@@ -10,7 +10,7 @@ import (
 )
 
 func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
-	method, _ := cmd.Flags().GetString("method")
+	method, _ := cmd.Flags().GetString("request")
 	url, _ := cmd.Flags().GetString("url")
 	if url == "" && len(args) > 0 {
 		url = args[0]
