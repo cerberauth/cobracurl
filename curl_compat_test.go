@@ -12,10 +12,7 @@ package cobracurl
 // Then A and B are compared for method, body, headers and cookies.
 //
 // Note: flags are registered manually with the types BuildRequest actually
-// reads via GetString/GetStringArray/GetStringToString.  RegisterFlags has
-// type mismatches for "header", "cookie", "form" and the body flag ("body"
-// vs "data") that prevent those features from working end-to-end through the
-// public API today.
+// reads via GetString/GetStringArray/GetStringToString.
 
 import (
 	"io"
@@ -32,13 +29,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// alwaysSkipHeaders lists headers whose default values differ between curl and
-// cobracurl, so they are excluded from the general header comparison.
 var alwaysSkipHeaders = map[string]bool{
-	"User-Agent":      true, // curl sends "curl/x.x" by default; cobracurl sends nothing
-	"Accept":          true, // curl sends "*/*" by default
-	"Accept-Encoding": true, // Go's http.Client adds "gzip"; curl does not
-	"Content-Length":  true, // auto-calculated; may differ for empty GET bodies
+	"User-Agent":      true,
+	"Accept":          true,
+	"Accept-Encoding": true,
+	"Content-Length":  true,
 }
 
 type capturedRequest struct {
@@ -86,25 +81,26 @@ func runCurl(t *testing.T, url string, args ...string) {
 	require.NoError(t, err, "curl failed: %s", out)
 }
 
-// buildAndRun creates a Cobra command with the given flags, builds the request
-// via BuildRequest, and fires it against url.
-//
-// Supported flag value types:
-//   - string       → cmd.Flags().Set(name, value)
-//   - []string     → cmd.Flags().Set(name, value) called once per element (StringArray)
-//   - map[string]string → packed as "k=v,k2=v2" for StringToString flags
 func buildAndRun(t *testing.T, url string, flags map[string]interface{}) {
 	t.Helper()
 	cmd := &cobra.Command{}
-	// Register with the types BuildRequest actually reads.
 	cmd.Flags().String("request", "", "")
 	cmd.Flags().String("url", "", "")
-	cmd.Flags().String("body", "", "")
+	cmd.Flags().String("data", "", "")
+	cmd.Flags().String("data-binary", "", "")
+	cmd.Flags().String("data-raw", "", "")
+	cmd.Flags().String("data-urlencode", "", "")
+	cmd.Flags().Bool("get", false, "")
+	cmd.Flags().Bool("head", false, "")
 	cmd.Flags().StringArray("header", nil, "")
 	cmd.Flags().StringArray("cookie", nil, "")
 	cmd.Flags().StringToString("form", nil, "")
 	cmd.Flags().String("user-agent", "", "")
 	cmd.Flags().String("user", "", "")
+	cmd.Flags().String("oauth2-bearer", "", "")
+	cmd.Flags().String("referer", "", "")
+	cmd.Flags().String("range", "", "")
+	cmd.Flags().Bool("compressed", false, "")
 
 	require.NoError(t, cmd.Flags().Set("url", url))
 	for name, val := range flags {
@@ -142,7 +138,6 @@ func assertRequestsMatch(t *testing.T, curlReq, cobraReq capturedRequest, extraS
 	assertBodiesEqual(t, curlReq.Body, cobraReq.Body)
 	assert.Equal(t, curlReq.Cookies, cobraReq.Cookies, "cookies")
 
-	// Every non-skipped header sent by curl must also appear in cobracurl.
 	for k, curlVals := range curlReq.Headers {
 		if skip(k) {
 			continue
@@ -153,7 +148,6 @@ func assertRequestsMatch(t *testing.T, curlReq, cobraReq capturedRequest, extraS
 		}
 	}
 
-	// Every non-skipped header sent by cobracurl must also appear in curl.
 	for k := range cobraReq.Headers {
 		if skip(k) {
 			continue
@@ -174,9 +168,7 @@ func TestCompatWithCurl(t *testing.T) {
 		curlArgs   []string
 		cobraFlags map[string]interface{}
 		extraSkip  map[string]bool
-		// verify runs after assertRequestsMatch for additional assertions
-		// (e.g. checking header values that are in alwaysSkipHeaders).
-		verify func(*testing.T, capturedRequest, capturedRequest)
+		verify     func(*testing.T, capturedRequest, capturedRequest)
 	}{
 		{
 			name:     "GET request",
@@ -195,7 +187,7 @@ func TestCompatWithCurl(t *testing.T) {
 			cobraFlags: map[string]interface{}{
 				"request": "POST",
 				"header":  []string{"Content-Type: application/json"},
-				"body":    `{"key":"value"}`,
+				"data":    `{"key":"value"}`,
 			},
 		},
 		{
@@ -223,6 +215,14 @@ func TestCompatWithCurl(t *testing.T) {
 			},
 		},
 		{
+			name:     "GET with multiple cookies",
+			curlArgs: []string{"-X", "GET", "-b", "a=1; b=2"},
+			cobraFlags: map[string]interface{}{
+				"request": "GET",
+				"cookie":  []string{"a=1; b=2"},
+			},
+		},
+		{
 			name: "POST with multiple headers",
 			curlArgs: []string{
 				"-X", "POST",
@@ -235,8 +235,6 @@ func TestCompatWithCurl(t *testing.T) {
 			},
 		},
 		{
-			// User-Agent is in alwaysSkipHeaders so assertRequestsMatch won't
-			// compare it; we verify the value explicitly in verify() instead.
 			name:     "GET with custom user agent",
 			curlArgs: []string{"-X", "GET", "-A", "mybot/1.0"},
 			cobraFlags: map[string]interface{}{
@@ -249,13 +247,53 @@ func TestCompatWithCurl(t *testing.T) {
 			},
 		},
 		{
-			// curl with -d implies POST and adds Content-Type: application/x-www-form-urlencoded.
-			// cobracurl's form handling produces the same Content-Type and body.
 			name:     "POST with form field",
 			curlArgs: []string{"-d", "field=hello"},
 			cobraFlags: map[string]interface{}{
 				"request": "POST",
 				"form":    map[string]string{"field": "hello"},
+			},
+		},
+		{
+			name:      "POST with data-raw",
+			curlArgs:  []string{"-X", "POST", "--data-raw", `raw body`},
+			extraSkip: map[string]bool{"Content-Type": true},
+			cobraFlags: map[string]interface{}{
+				"request":  "POST",
+				"data-raw": "raw body",
+			},
+		},
+		{
+			name:      "POST with data-binary",
+			curlArgs:  []string{"-X", "POST", "--data-binary", `binary data`},
+			extraSkip: map[string]bool{"Content-Type": true},
+			cobraFlags: map[string]interface{}{
+				"request":     "POST",
+				"data-binary": "binary data",
+			},
+		},
+		{
+			name:     "GET with oauth2-bearer token",
+			curlArgs: []string{"-X", "GET", "--oauth2-bearer", "mytoken123"},
+			cobraFlags: map[string]interface{}{
+				"request":       "GET",
+				"oauth2-bearer": "mytoken123",
+			},
+		},
+		{
+			name:     "GET with referer",
+			curlArgs: []string{"-X", "GET", "--referer", "https://example.com"},
+			cobraFlags: map[string]interface{}{
+				"request": "GET",
+				"referer": "https://example.com",
+			},
+		},
+		{
+			name:     "GET with range",
+			curlArgs: []string{"-X", "GET", "--range", "0-499"},
+			cobraFlags: map[string]interface{}{
+				"request": "GET",
+				"range":   "0-499",
 			},
 		},
 	}
@@ -278,8 +316,6 @@ func TestCompatWithCurl(t *testing.T) {
 	}
 }
 
-// assertBodiesEqual compares two request bodies. For URL-encoded bodies it
-// parses them into url.Values so that key order does not affect the result.
 func assertBodiesEqual(t *testing.T, curlBody, cobraBody string) {
 	t.Helper()
 	va, errA := url.ParseQuery(curlBody)

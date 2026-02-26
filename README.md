@@ -14,6 +14,7 @@ If you're building a CLI app with [Cobra](https://github.com/spf13/cobra) and wa
 
 - Define CLI flags for common HTTP request elements (method, URL, headers, body, etc.)
 - Generate `*http.Request` objects from those flags
+- Generate a pre-configured `*http.Client` (TLS, redirects, timeouts, proxy)
 - Minimal, dependency-free, and composable
 - Easy integration with existing Cobra commands
 
@@ -35,7 +36,7 @@ func init() {
 }
 ```
 
-2. Build the HTTP request in your command's Run function
+2. Build the HTTP request and client in your command's Run function
 
 ```go
 cmd := &cobra.Command{
@@ -46,7 +47,11 @@ cmd := &cobra.Command{
             return err
         }
 
-        client := &http.Client{}
+        client, err := cobracurl.BuildClient(cmd)
+        if err != nil {
+            return err
+        }
+
         resp, err := client.Do(req)
         if err != nil {
             return err
@@ -64,10 +69,12 @@ cmd := &cobra.Command{
 
 ```bash
 yourcli send \
-  --method POST \
+  --request POST \
   --url https://api.example.com/data \
   --header "Content-Type: application/json" \
-  --data '{"foo":"bar"}'
+  --data '{"foo":"bar"}' \
+  --location \
+  --insecure
 ```
 
 ## 📦 API
@@ -76,13 +83,23 @@ yourcli send \
 func RegisterFlags(flags *pflag.FlagSet)
 ```
 
-Register the flags for HTTP method, URL, headers, and body. This function should be called in the `init()` function of your Cobra command.
+Registers all supported curl-compatible flags on the given flag set. Call this in the `init()` function of your Cobra command.
 
 ```go
 func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error)
 ```
 
-Builds an `*http.Request` object based on the flags set in the Cobra command. It returns an error if any required flags are missing or if the request cannot be created.
+Builds an `*http.Request` from the flags set on the command. The first positional argument is used as the URL if `--url` is not set. Returns an error if `--request` and URL are both missing.
+
+Supported flags include: `--request`/`-X`, `--url`, `--header`/`-H`, `--data`/`-d`, `--data-binary`, `--data-raw`, `--data-urlencode`, `--form`/`-F`, `--json`, `--user`/`-u`, `--oauth2-bearer`, `--user-agent`/`-A`, `--referer`/`-e`, `--cookie`/`-b`, `--head`/`-I`, `--get`/`-G`, `--compressed`, `--range`/`-r`.
+
+```go
+func BuildClient(cmd *cobra.Command) (*http.Client, error)
+```
+
+Builds an `*http.Client` from the flags set on the command. Unlike the default Go HTTP client, redirects are **not** followed unless `--location` is set, matching curl's default behavior.
+
+Supported flags include: `--insecure`/`-k`, `--location`/`-L`, `--max-redirs`, `--max-time`/`-m`, `--connect-timeout`, `--proxy`/`-x`.
 
 ## Example
 
@@ -90,4 +107,4 @@ See example/ for a minimal CLI tool using cobracurl.
 
 ## License
 
-This repository is licensed under the [MIT License](https://github.com/cerberauth/cobracurl/blob/main/LICENSE) @ [CerberAuth](https://www.cerberauth.com/). You are free to use, modify, and distribute the contents of this repository for educational and testing purposes.
+This repository is licensed under the [MIT License](https://github.com/cerberauth/cobracurl/blob/main/LICENSE) @ [CerberAuth](https://www.cerberauth.com/).
