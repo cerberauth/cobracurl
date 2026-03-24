@@ -7,6 +7,146 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRegisterTimeoutFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterTimeoutFlags(flagSet)
+	assert.NotNil(t, flagSet.Lookup("connect-timeout"))
+	assert.NotNil(t, flagSet.Lookup("max-time"))
+	assert.Nil(t, flagSet.Lookup("proxy"))
+}
+
+func TestRegisterProxyFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterProxyFlags(flagSet)
+	for _, name := range []string{"proxy", "noproxy", "proxy-anyauth", "proxy-user", "proxytunnel", "proxy1.0"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+	assert.Nil(t, flagSet.Lookup("insecure"))
+}
+
+func TestRegisterTLSFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterTLSFlags(flagSet)
+	for _, name := range []string{"insecure", "cacert", "cert", "key", "tlsv1.2", "tls13-ciphers"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+	assert.Nil(t, flagSet.Lookup("proxy"))
+}
+
+func TestRegisterRedirectFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterRedirectFlags(flagSet)
+	for _, name := range []string{"location", "location-trusted", "max-redirs", "post301", "post302", "post303"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterNetworkFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterNetworkFlags(flagSet)
+	for _, name := range []string{"ipv4", "ipv6", "resolve", "doh-url", "interface"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterKeepAliveFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterKeepAliveFlags(flagSet)
+	for _, name := range []string{"no-keepalive", "keepalive-time", "tcp-fastopen", "tcp-nodelay", "expect100-timeout"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterAuthFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterAuthFlags(flagSet)
+	for _, name := range []string{"basic", "digest", "negotiate", "ntlm", "oauth2-bearer", "user", "aws-sigv4"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+	assert.Nil(t, flagSet.Lookup("header"))
+}
+
+func TestRegisterRequestFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterRequestFlags(flagSet)
+	for _, name := range []string{"request", "url", "head", "get", "http2", "http3", "path-as-is"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterHeaderFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterHeaderFlags(flagSet)
+	for _, name := range []string{"header", "user-agent", "referer", "cookie", "cookie-jar", "compressed"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+	assert.Nil(t, flagSet.Lookup("data"))
+}
+
+func TestRegisterBodyFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterBodyFlags(flagSet)
+	for _, name := range []string{"data", "data-binary", "data-raw", "form", "json", "upload-file"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterOutputFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterOutputFlags(flagSet)
+	for _, name := range []string{"output", "dump-header", "fail", "silent", "verbose", "show-headers"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterTransferFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterTransferFlags(flagSet)
+	for _, name := range []string{"limit-rate", "retry", "speed-limit", "parallel", "max-filesize", "range"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterFileFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterFileFlags(flagSet)
+	for _, name := range []string{"remote-name", "remote-time", "create-dirs", "no-clobber", "xattr"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterFTPFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterFTPFlags(flagSet)
+	for _, name := range []string{"ftp-pasv", "ftp-port", "ftp-method", "ftp-ssl-ccc", "disable-eprt"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterProtocolFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterProtocolFlags(flagSet)
+	for _, name := range []string{"proto", "socks4", "socks5", "ssl", "ssl-reqd", "sslv2"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterTraceFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterTraceFlags(flagSet)
+	for _, name := range []string{"trace", "trace-ascii", "trace-config", "trace-ids", "trace-time"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
+func TestRegisterMiscFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	RegisterMiscFlags(flagSet)
+	for _, name := range []string{"config", "variable", "engine", "metalink", "unix-socket", "hsts"} {
+		assert.NotNil(t, flagSet.Lookup(name), "flag %q should be registered", name)
+	}
+}
+
 func TestRegisterClientFlags(t *testing.T) {
 	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
 
