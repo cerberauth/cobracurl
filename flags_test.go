@@ -7,6 +7,50 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRegisterClientFlags(t *testing.T) {
+	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+
+	RegisterClientFlags(flagSet)
+
+	clientFlags := []struct {
+		name         string
+		flagName     string
+		expectedType string
+	}{
+		{"Insecure flag", "insecure", "bool"},
+		{"Cacert flag", "cacert", "string"},
+		{"Capath flag", "capath", "string"},
+		{"Ca-native flag", "ca-native", "bool"},
+		{"Cert flag", "cert", "string"},
+		{"Key flag", "key", "string"},
+		{"Pass flag", "pass", "string"},
+		{"Proxy flag", "proxy", "string"},
+		{"Noproxy flag", "noproxy", "string"},
+		{"Connect-timeout flag", "connect-timeout", "float64"},
+		{"Max-time flag", "max-time", "float64"},
+		{"Location flag", "location", "bool"},
+		{"Max-redirs flag", "max-redirs", "int"},
+		{"Tlsv1.2 flag", "tlsv1.2", "bool"},
+		{"Ipv4 flag", "ipv4", "bool"},
+		{"Ipv6 flag", "ipv6", "bool"},
+	}
+
+	for _, tt := range clientFlags {
+		t.Run(tt.name, func(t *testing.T) {
+			flag := flagSet.Lookup(tt.flagName)
+			assert.NotNil(t, flag, "Flag should be registered")
+			assert.Equal(t, tt.expectedType, flag.Value.Type(), "Flag type should match")
+		})
+	}
+
+	requestOnlyFlags := []string{"request", "url", "data", "header", "user-agent", "cookie", "form", "json"}
+	for _, name := range requestOnlyFlags {
+		t.Run("Request flag should not be present: "+name, func(t *testing.T) {
+			assert.Nil(t, flagSet.Lookup(name), "Request flag %q should not be registered by RegisterClientFlags", name)
+		})
+	}
+}
+
 func TestRegisterFlags(t *testing.T) {
 	flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
 
