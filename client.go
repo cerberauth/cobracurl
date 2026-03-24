@@ -2,9 +2,12 @@ package cobracurl
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -16,8 +19,44 @@ import (
 func BuildClient(cmd *cobra.Command) (*http.Client, error) {
 	transport := &http.Transport{}
 
+	var tlsConfig *tls.Config
+
 	if insecure, _ := cmd.Flags().GetBool("insecure"); insecure {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+		tlsConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+	}
+
+	if cacertFile, _ := cmd.Flags().GetString("cacert"); cacertFile != "" {
+		caCert, err := os.ReadFile(cacertFile)
+		if err != nil {
+			return nil, fmt.Errorf("reading cacert: %w", err)
+		}
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM(caCert) {
+			return nil, fmt.Errorf("failed to parse CA certificate from %s", cacertFile)
+		}
+		if tlsConfig == nil {
+			tlsConfig = &tls.Config{} //nolint:gosec
+		}
+		tlsConfig.RootCAs = caCertPool
+	}
+
+	if certFile, _ := cmd.Flags().GetString("cert"); certFile != "" {
+		keyFile, _ := cmd.Flags().GetString("key")
+		if keyFile == "" {
+			keyFile = certFile
+		}
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, fmt.Errorf("loading client certificate: %w", err)
+		}
+		if tlsConfig == nil {
+			tlsConfig = &tls.Config{} //nolint:gosec
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	if tlsConfig != nil {
+		transport.TLSClientConfig = tlsConfig
 	}
 
 	if connectTimeout, _ := cmd.Flags().GetFloat64("connect-timeout"); connectTimeout > 0 {
