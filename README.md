@@ -15,7 +15,8 @@ If you're building a CLI app with [Cobra](https://github.com/spf13/cobra) and wa
 - Define CLI flags for common HTTP request elements (method, URL, headers, body, etc.)
 - Generate `*http.Request` objects from those flags
 - Generate a pre-configured `*http.Client` (TLS, redirects, timeouts, proxy)
-- Minimal, dependency-free, and composable
+- Rate-limit requests via `--rate` using a standard `*rate.Limiter`
+- Minimal and composable
 - Easy integration with existing Cobra commands
 
 ## 🔧 Installation
@@ -36,7 +37,7 @@ func init() {
 }
 ```
 
-2. Build the HTTP request and client in your command's Run function
+2. Build the HTTP request, client, and optional rate limiter in your command's Run function
 
 ```go
 cmd := &cobra.Command{
@@ -50,6 +51,17 @@ cmd := &cobra.Command{
         client, err := cobracurl.BuildClient(cmd)
         if err != nil {
             return err
+        }
+
+        rl, err := cobracurl.BuildRateLimiter(cmd)
+        if err != nil {
+            return err
+        }
+
+        if rl != nil {
+            if err := rl.Wait(cmd.Context()); err != nil {
+                return err
+            }
         }
 
         resp, err := client.Do(req)
@@ -74,7 +86,8 @@ yourcli send \
   --header "Content-Type: application/json" \
   --data '{"foo":"bar"}' \
   --location \
-  --insecure
+  --insecure \
+  --rate 10/s
 ```
 
 ## 📦 API
@@ -100,6 +113,28 @@ func BuildClient(cmd *cobra.Command) (*http.Client, error)
 Builds an `*http.Client` from the flags set on the command. Unlike the default Go HTTP client, redirects are **not** followed unless `--location` is set, matching curl's default behavior.
 
 Supported flags include: `--insecure`/`-k`, `--location`/`-L`, `--max-redirs`, `--max-time`/`-m`, `--connect-timeout`, `--proxy`/`-x`.
+
+```go
+func BuildRateLimiter(cmd *cobra.Command) (*rate.Limiter, error)
+```
+
+Parses the `--rate` flag and returns a `*rate.Limiter` (from `golang.org/x/time/rate`) configured with burst=1 for a steady, non-bursty rate. Returns `nil` if `--rate` is not set, meaning no rate limiting is applied. Call `rl.Wait(ctx)` before each request.
+
+The flag accepts curl-style rate strings:
+
+| Value | Meaning |
+|-------|---------|
+| `10/s` | 10 requests per second |
+| `100/m` | 100 requests per minute |
+| `1000/h` | 1 000 requests per hour |
+| `5000/d` | 5 000 requests per day |
+| `60` | 60 requests per hour (default unit when omitted) |
+
+```go
+func ParseRate(rateStr string) (*rate.Limiter, error)
+```
+
+Lower-level helper that parses a rate string directly without a cobra command.
 
 ## Example
 
