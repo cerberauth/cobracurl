@@ -151,3 +151,72 @@ func encodeData(s string) string {
 }
 
 var ErrMissingRequiredFields = errors.New("missing required fields: method and url")
+
+// BuildRequestHeaders extracts HTTP headers and cookies from cobra command flags
+// without requiring a URL or method. Useful for applying curl-style header/auth
+// flags to an existing client rather than building a complete request.
+func BuildRequestHeaders(cmd *cobra.Command) (http.Header, []*http.Cookie, error) {
+	header := http.Header{}
+	var cookies []*http.Cookie
+
+	if compressed, _ := cmd.Flags().GetBool("compressed"); compressed {
+		header.Set("Accept-Encoding", "gzip, deflate, br")
+	}
+
+	if rangeVal, _ := cmd.Flags().GetString("range"); rangeVal != "" {
+		header.Set("Range", "bytes="+rangeVal)
+	}
+
+	if userAgent, _ := cmd.Flags().GetString("user-agent"); userAgent != "" {
+		header.Set("User-Agent", userAgent)
+	}
+
+	if userArg, _ := cmd.Flags().GetString("user"); userArg != "" {
+		parts := strings.SplitN(userArg, ":", 2)
+		if len(parts) == 2 {
+			req, _ := http.NewRequest(http.MethodGet, "http://x", nil)
+			req.SetBasicAuth(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+			header.Set("Authorization", req.Header.Get("Authorization"))
+		}
+	}
+
+	if bearer, _ := cmd.Flags().GetString("oauth2-bearer"); bearer != "" {
+		header.Set("Authorization", "Bearer "+bearer)
+	}
+
+	if referer, _ := cmd.Flags().GetString("referer"); referer != "" {
+		header.Set("Referer", referer)
+	}
+
+	if headers, _ := cmd.Flags().GetStringArray("header"); len(headers) > 0 {
+		for _, h := range headers {
+			if h == "" {
+				continue
+			}
+			parts := strings.SplitN(h, ":", 2)
+			if len(parts) == 2 {
+				header.Add(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+			}
+		}
+	}
+
+	if cookieStrs, _ := cmd.Flags().GetStringArray("cookie"); len(cookieStrs) > 0 {
+		for _, cookieStr := range cookieStrs {
+			for _, pair := range strings.Split(cookieStr, ";") {
+				pair = strings.TrimSpace(pair)
+				if pair == "" {
+					continue
+				}
+				parts := strings.SplitN(pair, "=", 2)
+				if len(parts) == 2 {
+					cookies = append(cookies, &http.Cookie{
+						Name:  strings.TrimSpace(parts[0]),
+						Value: strings.TrimSpace(parts[1]),
+					})
+				}
+			}
+		}
+	}
+
+	return header, cookies, nil
+}

@@ -387,6 +387,119 @@ func TestBuildRequest(t *testing.T) {
 	}
 }
 
+func TestBuildRequestHeaders(t *testing.T) {
+	tests := []struct {
+		name            string
+		flags           map[string]interface{}
+		expectedHeaders map[string]string
+		expectedCookies map[string]string
+	}{
+		{
+			name:            "No flags",
+			flags:           map[string]interface{}{},
+			expectedHeaders: map[string]string{},
+			expectedCookies: map[string]string{},
+		},
+		{
+			name: "Custom header",
+			flags: map[string]interface{}{
+				"header": []string{"X-Custom: value"},
+			},
+			expectedHeaders: map[string]string{"X-Custom": "value"},
+		},
+		{
+			name: "Basic auth via --user",
+			flags: map[string]interface{}{
+				"user": "username:password",
+			},
+			expectedHeaders: map[string]string{
+				"Authorization": "Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
+			},
+		},
+		{
+			name: "Bearer token via --oauth2-bearer",
+			flags: map[string]interface{}{
+				"oauth2-bearer": "mytoken",
+			},
+			expectedHeaders: map[string]string{
+				"Authorization": "Bearer mytoken",
+			},
+		},
+		{
+			name: "User-Agent",
+			flags: map[string]interface{}{
+				"user-agent": "TestAgent/1.0",
+			},
+			expectedHeaders: map[string]string{"User-Agent": "TestAgent/1.0"},
+		},
+		{
+			name: "Referer",
+			flags: map[string]interface{}{
+				"referer": "http://referrer.example.com",
+			},
+			expectedHeaders: map[string]string{"Referer": "http://referrer.example.com"},
+		},
+		{
+			name: "Compressed",
+			flags: map[string]interface{}{
+				"compressed": true,
+			},
+			expectedHeaders: map[string]string{"Accept-Encoding": "gzip, deflate, br"},
+		},
+		{
+			name: "Cookie",
+			flags: map[string]interface{}{
+				"cookie": []string{"session=abc123"},
+			},
+			expectedCookies: map[string]string{"session": "abc123"},
+		},
+		{
+			name: "Multiple cookies in one value",
+			flags: map[string]interface{}{
+				"cookie": []string{"a=1; b=2"},
+			},
+			expectedCookies: map[string]string{"a": "1", "b": "2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &cobra.Command{}
+			for key, value := range tt.flags {
+				switch v := value.(type) {
+				case string:
+					cmd.Flags().String(key, v, "")
+				case bool:
+					cmd.Flags().Bool(key, v, "")
+				case []string:
+					cmd.Flags().StringArray(key, v, "")
+				}
+			}
+
+			header, cookies, err := BuildRequestHeaders(cmd)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			for key, value := range tt.expectedHeaders {
+				if header.Get(key) != value {
+					t.Errorf("expected header %s: %s, got %s", key, value, header.Get(key))
+				}
+			}
+
+			cookieMap := make(map[string]string, len(cookies))
+			for _, c := range cookies {
+				cookieMap[c.Name] = c.Value
+			}
+			for name, value := range tt.expectedCookies {
+				if cookieMap[name] != value {
+					t.Errorf("expected cookie %s=%s, got %s", name, value, cookieMap[name])
+				}
+			}
+		})
+	}
+}
+
 func bodiesEqual(a, b string) bool {
 	va, errA := url.ParseQuery(a)
 	vb, errB := url.ParseQuery(b)
