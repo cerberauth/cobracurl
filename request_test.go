@@ -55,10 +55,44 @@ func TestBuildRequest(t *testing.T) {
 			expectedMethod: "POST",
 		},
 		{
-			name:          "Missing method and URL",
+			name:          "Missing URL",
 			flags:         map[string]interface{}{},
 			args:          []string{},
 			expectedError: ErrMissingRequiredFields,
+		},
+		{
+			name: "Default GET when no method or data specified",
+			flags: map[string]interface{}{
+				"url": "http://example.com",
+			},
+			args:           []string{},
+			expectedError:  nil,
+			expectedURL:    "http://example.com",
+			expectedMethod: "GET",
+		},
+		{
+			name: "Default POST when --data specified without method",
+			flags: map[string]interface{}{
+				"url":  "http://example.com",
+				"data": "key=value",
+			},
+			args:           []string{},
+			expectedError:  nil,
+			expectedURL:    "http://example.com",
+			expectedMethod: "POST",
+			expectedBody:   "key=value",
+		},
+		{
+			name: "Default POST when --json specified without method",
+			flags: map[string]interface{}{
+				"url":  "http://example.com",
+				"json": `{"key":"value"}`,
+			},
+			args:           []string{},
+			expectedError:  nil,
+			expectedURL:    "http://example.com",
+			expectedMethod: "POST",
+			expectedBody:   `{"key":"value"}`,
 		},
 		{
 			name: "HEAD request via --head flag",
