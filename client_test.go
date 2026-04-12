@@ -154,6 +154,56 @@ func TestBuildClient(t *testing.T) {
 				assert.NotNil(t, transport.DialContext)
 			},
 		},
+		{
+			name: "no-keepalive disables keep-alives",
+			flags: map[string]interface{}{
+				"no-keepalive": true,
+			},
+			assertFn: func(t *testing.T, client *http.Client) {
+				transport, ok := client.Transport.(*http.Transport)
+				require.True(t, ok)
+				assert.True(t, transport.DisableKeepAlives)
+			},
+		},
+		{
+			name: "keepalive-time sets dialer keepalive interval",
+			flags: map[string]interface{}{
+				"no-keepalive":   false,
+				"keepalive-time": 30,
+			},
+			assertFn: func(t *testing.T, client *http.Client) {
+				transport, ok := client.Transport.(*http.Transport)
+				require.True(t, ok)
+				assert.NotNil(t, transport.DialContext)
+				assert.False(t, transport.DisableKeepAlives)
+			},
+		},
+		{
+			name: "no-keepalive with keepalive-time disables keep-alives",
+			flags: map[string]interface{}{
+				"no-keepalive":   true,
+				"keepalive-time": 30,
+			},
+			assertFn: func(t *testing.T, client *http.Client) {
+				transport, ok := client.Transport.(*http.Transport)
+				require.True(t, ok)
+				assert.True(t, transport.DisableKeepAlives)
+			},
+		},
+		{
+			name: "connect-timeout and keepalive-time both configure the dialer",
+			flags: map[string]interface{}{
+				"connect-timeout": 5.0,
+				"no-keepalive":    false,
+				"keepalive-time":  30,
+			},
+			assertFn: func(t *testing.T, client *http.Client) {
+				transport, ok := client.Transport.(*http.Transport)
+				require.True(t, ok)
+				assert.NotNil(t, transport.DialContext)
+				assert.False(t, transport.DisableKeepAlives)
+			},
+		},
 	}
 
 	for _, tt := range tests {
