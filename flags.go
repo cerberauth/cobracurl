@@ -245,7 +245,7 @@ func RegisterLocationTrustedFlag(flags *pflag.FlagSet) {
 }
 
 func RegisterMaxRedirsFlag(flags *pflag.FlagSet) {
-	flags.Int("max-redirs", 0, "Maximum number of redirects allowed")
+	flags.Int("max-redirs", 30, "Maximum number of redirects allowed")
 }
 
 func RegisterPost301Flag(flags *pflag.FlagSet) {
@@ -273,7 +273,7 @@ func RegisterDohUrlFlag(flags *pflag.FlagSet) {
 }
 
 func RegisterHappyEyeballsTimeoutMsFlag(flags *pflag.FlagSet) {
-	flags.Int("happy-eyeballs-timeout-ms", 0, "How long to wait for IPv6 before using IPv4")
+	flags.Int("happy-eyeballs-timeout-ms", 200, "How long to wait for IPv6 before using IPv4")
 }
 
 func RegisterInterfaceFlag(flags *pflag.FlagSet) {
@@ -297,11 +297,11 @@ func RegisterResolveFlag(flags *pflag.FlagSet) {
 }
 
 func RegisterExpect100TimeoutFlag(flags *pflag.FlagSet) {
-	flags.Int("expect100-timeout", 0, "How long to wait for 100-continue")
+	flags.Int("expect100-timeout", 1, "How long to wait for 100-continue")
 }
 
 func RegisterKeepaliveTimeFlag(flags *pflag.FlagSet) {
-	flags.Int("keepalive-time", 0, "Wait seconds before sending keepalive probes")
+	flags.Int("keepalive-time", 60, "Wait seconds before sending keepalive probes")
 }
 
 func RegisterNoKeepaliveFlag(flags *pflag.FlagSet) {
@@ -621,7 +621,7 @@ func RegisterParallelImmediateFlag(flags *pflag.FlagSet) {
 }
 
 func RegisterParallelMaxFlag(flags *pflag.FlagSet) {
-	flags.Int("parallel-max", 0, "Maximum concurrent parallel transfers")
+	flags.Int("parallel-max", 50, "Maximum concurrent parallel transfers")
 }
 
 func RegisterRangeFlag(flags *pflag.FlagSet) {
@@ -657,7 +657,7 @@ func RegisterSpeedLimitFlag(flags *pflag.FlagSet) {
 }
 
 func RegisterSpeedTimeFlag(flags *pflag.FlagSet) {
-	flags.IntP("speed-time", "y", 0, "Trigger 'speed-limit' abort after this time")
+	flags.IntP("speed-time", "y", 30, "Trigger 'speed-limit' abort after this time")
 }
 
 func RegisterCreateDirsFlag(flags *pflag.FlagSet) {

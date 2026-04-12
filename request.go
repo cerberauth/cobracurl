@@ -27,17 +27,33 @@ func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 		}
 	}
 
-	if method == "" || rawURL == "" {
+	data, _ := cmd.Flags().GetString("data")
+	dataBinary, _ := cmd.Flags().GetString("data-binary")
+	dataRaw, _ := cmd.Flags().GetString("data-raw")
+	dataUrlencode, _ := cmd.Flags().GetString("data-urlencode")
+
+	if method == "" {
+		hasData := data != "" || dataBinary != "" || dataRaw != "" || dataUrlencode != ""
+		if !hasData {
+			if fm, _ := cmd.Flags().GetStringToString("form"); len(fm) > 0 {
+				hasData = true
+			} else if jd, _ := cmd.Flags().GetString("json"); jd != "" {
+				hasData = true
+			}
+		}
+		if hasData {
+			method = "POST"
+		} else {
+			method = "GET"
+		}
+	}
+
+	if rawURL == "" {
 		return nil, ErrMissingRequiredFields
 	}
 
 	var body string
 	var extraHeaders []string
-
-	data, _ := cmd.Flags().GetString("data")
-	dataBinary, _ := cmd.Flags().GetString("data-binary")
-	dataRaw, _ := cmd.Flags().GetString("data-raw")
-	dataUrlencode, _ := cmd.Flags().GetString("data-urlencode")
 
 	switch {
 	case data != "":
@@ -150,7 +166,7 @@ func encodeData(s string) string {
 	return url.QueryEscape(s)
 }
 
-var ErrMissingRequiredFields = errors.New("missing required fields: method and url")
+var ErrMissingRequiredFields = errors.New("missing required field: url")
 
 // BuildRequestHeaders extracts HTTP headers and cookies from cobra command flags
 // without requiring a URL or method. Useful for applying curl-style header/auth
