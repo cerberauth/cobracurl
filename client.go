@@ -14,8 +14,6 @@ import (
 )
 
 // BuildClient creates an http.Client configured from cobra command flags.
-// Unlike the default http.Client, redirects are NOT followed unless --location
-// is set, matching curl's default behavior.
 func BuildClient(cmd *cobra.Command) (*http.Client, error) {
 	transport := &http.Transport{}
 
@@ -59,9 +57,22 @@ func BuildClient(cmd *cobra.Command) (*http.Client, error) {
 		transport.TLSClientConfig = tlsConfig
 	}
 
-	if connectTimeout, _ := cmd.Flags().GetFloat64("connect-timeout"); connectTimeout > 0 {
-		d := time.Duration(connectTimeout * float64(time.Second))
-		transport.DialContext = (&net.Dialer{Timeout: d}).DialContext
+	// tcp-nodelay is already enabled by default in Go (since Go 1.5).
+	noKeepalive, _ := cmd.Flags().GetBool("no-keepalive")
+	keepaliveTime, _ := cmd.Flags().GetInt("keepalive-time")
+	connectTimeout, _ := cmd.Flags().GetFloat64("connect-timeout")
+
+	dialer := &net.Dialer{}
+	if connectTimeout > 0 {
+		dialer.Timeout = time.Duration(connectTimeout * float64(time.Second))
+	}
+	if !noKeepalive && keepaliveTime > 0 {
+		dialer.KeepAlive = time.Duration(keepaliveTime) * time.Second
+	}
+	transport.DialContext = dialer.DialContext
+
+	if noKeepalive {
+		transport.DisableKeepAlives = true
 	}
 
 	if proxyStr, _ := cmd.Flags().GetString("proxy"); proxyStr != "" {
