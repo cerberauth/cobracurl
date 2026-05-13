@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const DefaultUserAgent = "cobracurl (+https://github.com/cerberauth/cobracurl)"
+
 func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 	method, _ := cmd.Flags().GetString("request")
 	rawURL, _ := cmd.Flags().GetString("url")
@@ -156,6 +158,10 @@ func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 		}
 	}
 
+	if req.Header.Get("User-Agent") == "" {
+		req.Header.Set("User-Agent", DefaultUserAgent)
+	}
+
 	return req, nil
 }
 
@@ -232,6 +238,10 @@ func BuildRequestHeaders(cmd *cobra.Command) (http.Header, []*http.Cookie, error
 				}
 			}
 		}
+	}
+
+	if header.Get("User-Agent") == "" {
+		header.Set("User-Agent", DefaultUserAgent)
 	}
 
 	return header, cookies, nil

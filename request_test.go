@@ -71,6 +71,19 @@ func TestBuildRequest(t *testing.T) {
 			expectedMethod: "GET",
 		},
 		{
+			name: "Default User-Agent",
+			flags: map[string]interface{}{
+				"url": "http://example.com",
+			},
+			args:           []string{},
+			expectedError:  nil,
+			expectedURL:    "http://example.com",
+			expectedMethod: "GET",
+			expectedHeaders: map[string]string{
+				"User-Agent": DefaultUserAgent,
+			},
+		},
+		{
 			name: "Default POST when --data specified without method",
 			flags: map[string]interface{}{
 				"url":  "http://example.com",
@@ -431,7 +444,7 @@ func TestBuildRequestHeaders(t *testing.T) {
 		{
 			name:            "No flags",
 			flags:           map[string]interface{}{},
-			expectedHeaders: map[string]string{},
+			expectedHeaders: map[string]string{"User-Agent": DefaultUserAgent},
 			expectedCookies: map[string]string{},
 		},
 		{
