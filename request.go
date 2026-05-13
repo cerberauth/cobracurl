@@ -21,7 +21,7 @@ func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 
 	forceGet, _ := cmd.Flags().GetBool("get")
 	if forceGet && method == "" {
-		method = "GET"
+		method = http.MethodGet
 	}
 	if method == "" {
 		if head, _ := cmd.Flags().GetBool("head"); head {
@@ -44,9 +44,9 @@ func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 			}
 		}
 		if hasData {
-			method = "POST"
+			method = http.MethodPost
 		} else {
-			method = "GET"
+			method = http.MethodGet
 		}
 	}
 
@@ -141,6 +141,7 @@ func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 		}
 	}
 
+	isSecure := strings.HasPrefix(strings.ToLower(rawURL), "https://")
 	cookies, _ := cmd.Flags().GetStringArray("cookie")
 	for _, cookieStr := range cookies {
 		for _, pair := range strings.Split(cookieStr, ";") {
@@ -150,9 +151,13 @@ func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 			}
 			parts := strings.SplitN(pair, "=", 2)
 			if len(parts) == 2 {
+				//nolint:gosec // G124: Secure is set conditionally based on protocol
 				req.AddCookie(&http.Cookie{
-					Name:  strings.TrimSpace(parts[0]),
-					Value: strings.TrimSpace(parts[1]),
+					Name:     strings.TrimSpace(parts[0]),
+					Value:    strings.TrimSpace(parts[1]),
+					HttpOnly: true,
+					Secure:   isSecure,
+					SameSite: http.SameSiteStrictMode,
 				})
 			}
 		}
@@ -222,6 +227,8 @@ func BuildRequestHeaders(cmd *cobra.Command) (http.Header, []*http.Cookie, error
 		}
 	}
 
+	rawURL, _ := cmd.Flags().GetString("url")
+	isSecure := strings.HasPrefix(strings.ToLower(rawURL), "https://")
 	if cookieStrs, _ := cmd.Flags().GetStringArray("cookie"); len(cookieStrs) > 0 {
 		for _, cookieStr := range cookieStrs {
 			for _, pair := range strings.Split(cookieStr, ";") {
@@ -231,9 +238,13 @@ func BuildRequestHeaders(cmd *cobra.Command) (http.Header, []*http.Cookie, error
 				}
 				parts := strings.SplitN(pair, "=", 2)
 				if len(parts) == 2 {
+					//nolint:gosec // G124: Secure is set conditionally based on protocol
 					cookies = append(cookies, &http.Cookie{
-						Name:  strings.TrimSpace(parts[0]),
-						Value: strings.TrimSpace(parts[1]),
+						Name:     strings.TrimSpace(parts[0]),
+						Value:    strings.TrimSpace(parts[1]),
+						HttpOnly: true,
+						Secure:   isSecure,
+						SameSite: http.SameSiteLaxMode,
 					})
 				}
 			}
