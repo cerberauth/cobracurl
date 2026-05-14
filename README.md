@@ -10,7 +10,7 @@
 
 If you're building a CLI app with [Cobra](https://github.com/spf13/cobra) and want to recreate or debug HTTP requests using cURL-like arguments, `cobracurl` provides an easy way to translate CLI flags into a fully-formed `*http.Request`.
 
-## ✨ Features
+## Features
 
 - Define CLI flags for common HTTP request elements (method, URL, headers, body, etc.)
 - Generate `*http.Request` objects from those flags
@@ -25,7 +25,7 @@ If you're building a CLI app with [Cobra](https://github.com/spf13/cobra) and wa
 go get github.com/cerberauth/cobracurl
 ```
 
-## 🚀 Usage
+## Usage
 
 1. Register flags on your Cobra command
 
@@ -90,7 +90,7 @@ yourcli send \
   --rate 10/s
 ```
 
-## 📦 API
+## API
 
 ```go
 func RegisterFlags(flags *pflag.FlagSet)
@@ -138,7 +138,7 @@ Lower-level helper that parses a rate string directly without a cobra command.
 
 ## Example
 
-See example/ for a minimal CLI tool using cobracurl.
+See [example/](/example/README.md) for a minimal CLI tool using cobracurl.
 
 ## License
 
