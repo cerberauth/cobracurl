@@ -1,14 +1,14 @@
-# cobracurl-demo
+# cobracurl Demo
 
 **cobracurl-demo** is a Go project that demonstrates the usage of the [`cobracurl`](https://github.com/cerberauth/cobracurl) package to build and send HTTP requests from a Cobra CLI application. This project serves as a practical example for developers looking to integrate HTTP request capabilities into their CLI tools.
 
-## ✨ Features
+## Features
 
 - Build HTTP requests using CLI flags
 - Supports various HTTP methods and headers
 - Easy integration with the `cobracurl` package
 
-## 🔧 Installation
+## Installation
 
 To run this project, ensure you have Go installed and then clone the repository:
 
@@ -18,7 +18,7 @@ cd example
 go mod tidy
 ```
 
-## 🚀 Usage
+## Usage
 
 1. Build the project:
 
@@ -36,7 +36,7 @@ go build -o yourcli ./cmd
   --data '{"foo":"bar"}'
 ```
 
-## 📦 API
+## API
 
 This project utilizes the following functions from the `cobracurl` package:
 
@@ -54,4 +54,4 @@ Builds an `*http.Request` object based on the flags set in the Cobra command.
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/cerberauth/cobracurl/blob/main/LICENSE). You are free to use, modify, and distribute the contents of this repository for educational and testing purposes.
+This repository is licensed under the [MIT License](https://github.com/cerberauth/cobracurl/blob/main/LICENSE) @ [CerberAuth](https://www.cerberauth.com/).
