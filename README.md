@@ -122,7 +122,7 @@ Supported flags include: `--insecure`/`-k`, `--location`/`-L`, `--max-redirs`, `
 func BuildRateLimiter(cmd *cobra.Command) (*rate.Limiter, error)
 ```
 
-Parses the `--rate` flag and returns a `*rate.Limiter` (from `golang.org/x/time/rate`) configured with burst=1 for a steady, non-bursty rate. Returns `nil` if `--rate` is not set, meaning no rate limiting is applied. Call `rl.Wait(ctx)` before each request.
+Parses the `--rate` flag and returns a `*rate.Limiter` (from `golang.org/x/time/rate`) configured with burst=1 for a steady, non-bursty rate. Returns `nil` if `--rate` is not set, meaning no rate limiting is applied. Call `rl.Wait(ctx)` before each request. A rate without a unit is applied per hour, as in curl, and a warning is written to the command's stderr because it is easy to misread as per second.
 
 The flag accepts curl-style rate strings:
 
@@ -132,13 +132,13 @@ The flag accepts curl-style rate strings:
 | `100/m` | 100 requests per minute |
 | `1000/h` | 1 000 requests per hour |
 | `5000/d` | 5 000 requests per day |
-| `60` | 60 requests per hour (default unit when omitted) |
+| `60` | 60 requests per hour (default unit when omitted, with a warning) |
 
 ```go
-func ParseRate(rateStr string) (*rate.Limiter, error)
+func ParseRate(rateStr string) (limiter *rate.Limiter, warning string, err error)
 ```
 
-Lower-level helper that parses a rate string directly without a cobra command.
+Lower-level helper that parses a rate string directly without a cobra command. `warning` is non-empty when the rate has no unit (applied per hour); the limiter is still returned. `ParseRate("10/s")` returns an empty warning.
 
 ## Example
 
