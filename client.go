@@ -14,8 +14,13 @@ import (
 )
 
 // BuildClient creates an http.Client configured from cobra command flags.
+//
+// The transport is cloned from http.DefaultTransport so it keeps the standard
+// library defaults (proxy from environment, TLS handshake and idle timeouts,
+// connection pooling). When --proxy is unset, HTTP_PROXY, HTTPS_PROXY and
+// NO_PROXY are honored.
 func BuildClient(cmd *cobra.Command) (*http.Client, error) {
-	transport := &http.Transport{}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
 
 	var tlsConfig *tls.Config
 
@@ -55,6 +60,8 @@ func BuildClient(cmd *cobra.Command) (*http.Client, error) {
 
 	if tlsConfig != nil {
 		transport.TLSClientConfig = tlsConfig
+		// A custom TLS config disables HTTP/2 unless explicitly re-enabled.
+		transport.ForceAttemptHTTP2 = true
 	}
 
 	// tcp-nodelay is already enabled by default in Go (since Go 1.5).

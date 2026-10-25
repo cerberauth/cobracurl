@@ -237,6 +237,82 @@ func TestBuildClient(t *testing.T) {
 	}
 }
 
+func TestBuildClientTransportDefaults(t *testing.T) {
+	t.Run("keeps default transport settings", func(t *testing.T) {
+		client, err := BuildClient(&cobra.Command{})
+		require.NoError(t, err)
+
+		transport, ok := client.Transport.(*http.Transport)
+		require.True(t, ok)
+		def := http.DefaultTransport.(*http.Transport)
+		assert.NotNil(t, transport.Proxy)
+		assert.Equal(t, def.TLSHandshakeTimeout, transport.TLSHandshakeTimeout)
+		assert.Equal(t, def.IdleConnTimeout, transport.IdleConnTimeout)
+		assert.Equal(t, def.MaxIdleConns, transport.MaxIdleConns)
+	})
+
+	t.Run("does not mutate the default transport", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool("insecure", true, "")
+		cmd.Flags().String("proxy", "http://proxy.example.com:8080", "")
+
+		_, err := BuildClient(cmd)
+		require.NoError(t, err)
+
+		def := http.DefaultTransport.(*http.Transport)
+		if def.TLSClientConfig != nil {
+			assert.False(t, def.TLSClientConfig.InsecureSkipVerify)
+		}
+	})
+
+	t.Run("uses environment proxy when --proxy is unset", func(t *testing.T) {
+		t.Setenv("HTTPS_PROXY", "http://env-proxy.example.com:3128")
+		t.Setenv("NO_PROXY", "")
+		t.Setenv("no_proxy", "")
+
+		client, err := BuildClient(&cobra.Command{})
+		require.NoError(t, err)
+
+		transport := client.Transport.(*http.Transport)
+		req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
+		require.NoError(t, err)
+		proxyURL, err := transport.Proxy(req)
+		require.NoError(t, err)
+		require.NotNil(t, proxyURL)
+		assert.Equal(t, "env-proxy.example.com:3128", proxyURL.Host)
+	})
+
+	t.Run("--proxy overrides environment proxy", func(t *testing.T) {
+		t.Setenv("HTTPS_PROXY", "http://env-proxy.example.com:3128")
+
+		cmd := &cobra.Command{}
+		cmd.Flags().String("proxy", "http://flag-proxy.example.com:8080", "")
+
+		client, err := BuildClient(cmd)
+		require.NoError(t, err)
+
+		transport := client.Transport.(*http.Transport)
+		req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
+		require.NoError(t, err)
+		proxyURL, err := transport.Proxy(req)
+		require.NoError(t, err)
+		require.NotNil(t, proxyURL)
+		assert.Equal(t, "flag-proxy.example.com:8080", proxyURL.Host)
+	})
+
+	t.Run("custom TLS config keeps HTTP/2 enabled", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool("insecure", true, "")
+
+		client, err := BuildClient(cmd)
+		require.NoError(t, err)
+
+		transport := client.Transport.(*http.Transport)
+		require.NotNil(t, transport.TLSClientConfig)
+		assert.True(t, transport.ForceAttemptHTTP2)
+	})
+}
+
 func TestBuildClientTLS(t *testing.T) {
 	certPEM, keyPEM := generateTestCert(t)
 	certFile := writeTempFile(t, certPEM)
