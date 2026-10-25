@@ -107,10 +107,12 @@ Builds an `*http.Request` from the flags set on the command. The first positiona
 Supported flags include: `--request`/`-X`, `--url`, `--header`/`-H`, `--data`/`-d`, `--data-binary`, `--data-raw`, `--data-urlencode`, `--form`/`-F`, `--json`, `--user`/`-u`, `--oauth2-bearer`, `--user-agent`/`-A`, `--referer`/`-e`, `--cookie`/`-b`, `--head`/`-I`, `--get`/`-G`, `--compressed`, `--range`/`-r`.
 
 ```go
-func BuildClient(cmd *cobra.Command) (*http.Client, error)
+func BuildClient(cmd *cobra.Command, opts ...ClientOption) (*http.Client, error)
 ```
 
-Builds an `*http.Client` from the flags set on the command. Unlike the default Go HTTP client, redirects are **not** followed unless `--location` is set, matching curl's default behavior.
+Builds an `*http.Client` from the flags set on the command. Unlike the default Go HTTP client, redirects are **not** followed unless `--location` is set, matching curl's default behavior. The transport is cloned from `http.DefaultTransport`, so `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY` are honored when `--proxy` is unset.
+
+Like curl, no overall timeout is applied by default. Embedders can set a fallback with `cobracurl.WithDefaultTimeout(d)`; `--max-time` still takes precedence.
 
 Supported flags include: `--insecure`/`-k`, `--location`/`-L`, `--max-redirs`, `--max-time`/`-m`, `--connect-timeout`, `--proxy`/`-x`.
 

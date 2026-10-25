@@ -313,6 +313,34 @@ func TestBuildClientTransportDefaults(t *testing.T) {
 	})
 }
 
+func TestBuildClientDefaultTimeout(t *testing.T) {
+	t.Run("no option leaves timeout unset", func(t *testing.T) {
+		client, err := BuildClient(&cobra.Command{})
+		require.NoError(t, err)
+		assert.Equal(t, time.Duration(0), client.Timeout)
+	})
+
+	t.Run("option sets timeout when --max-time is unset", func(t *testing.T) {
+		client, err := BuildClient(&cobra.Command{}, WithDefaultTimeout(10*time.Second))
+		require.NoError(t, err)
+		assert.Equal(t, 10*time.Second, client.Timeout)
+	})
+
+	t.Run("--max-time overrides option", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().Float64("max-time", 2.0, "")
+		client, err := BuildClient(cmd, WithDefaultTimeout(10*time.Second))
+		require.NoError(t, err)
+		assert.Equal(t, 2*time.Second, client.Timeout)
+	})
+
+	t.Run("zero option value applies no timeout", func(t *testing.T) {
+		client, err := BuildClient(&cobra.Command{}, WithDefaultTimeout(0))
+		require.NoError(t, err)
+		assert.Equal(t, time.Duration(0), client.Timeout)
+	})
+}
+
 func TestBuildClientTLS(t *testing.T) {
 	certPEM, keyPEM := generateTestCert(t)
 	certFile := writeTempFile(t, certPEM)
