@@ -569,3 +569,96 @@ func bodiesEqual(a, b string) bool {
 	}
 	return a == b
 }
+
+func TestNormalizeURL(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{"https://e.com/a", "https://e.com/a", false},
+		{"http://e.com", "http://e.com", false},
+		{"HTTPS://E.com", "HTTPS://E.com", false},
+		{"ftp://e.com/file", "ftp://e.com/file", false},
+		{"e.com", "http://e.com", false},
+		{"e.com/path?q=1", "http://e.com/path?q=1", false},
+		{"localhost:5000", "http://localhost:5000", false},
+		{"localhost:5000/api/v1", "http://localhost:5000/api/v1", false},
+		{"e.com:443", "https://e.com:443", false},
+		{"e.com:443/x", "https://e.com:443/x", false},
+		{"e.com:8443", "http://e.com:8443", false},
+		{"127.0.0.1:8080", "http://127.0.0.1:8080", false},
+		{"[::1]", "http://[::1]", false},
+		{"[::1]:8080", "http://[::1]:8080", false},
+		{"[::1]:8080/x", "http://[::1]:8080/x", false},
+		{"[::1]:443", "https://[::1]:443", false},
+		{"//e.com/x", "http://e.com/x", false},
+		{"  e.com  ", "http://e.com", false},
+		{"e.com/redirect?to=http://other.com", "http://e.com/redirect?to=http://other.com", false},
+		{"", "", true},
+		{"   ", "", true},
+		{"http://", "", true},
+		{":8080", "", true},
+		{"http://[::1", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := NormalizeURL(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("NormalizeURL(%q) = %q, want error", tt.input, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("NormalizeURL(%q) unexpected error: %v", tt.input, err)
+			}
+			if got != tt.want {
+				t.Errorf("NormalizeURL(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildRequestNormalizesURL(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		url  string
+		want string
+	}{
+		{"host:port from args", []string{"localhost:5000"}, "", "http://localhost:5000"},
+		{"bare host from --url", nil, "e.com/a", "http://e.com/a"},
+		{"port 443 defaults to https", []string{"e.com:443"}, "", "https://e.com:443"},
+		{"IPv6 literal", []string{"[::1]:8080/x"}, "", "http://[::1]:8080/x"},
+		{"explicit scheme unchanged", []string{"https://e.com/a"}, "", "https://e.com/a"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &cobra.Command{}
+			RegisterFlags(cmd.Flags())
+			if tt.url != "" {
+				if err := cmd.Flags().Set("url", tt.url); err != nil {
+					t.Fatal(err)
+				}
+			}
+			req, err := BuildRequest(cmd, tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got := req.URL.String(); got != tt.want {
+				t.Errorf("URL = %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	t.Run("invalid URL returns error", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		RegisterFlags(cmd.Flags())
+		if _, err := BuildRequest(cmd, []string{"http://"}); err == nil {
+			t.Fatal("expected error")
+		}
+	})
+}

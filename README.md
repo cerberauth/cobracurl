@@ -102,9 +102,15 @@ Registers all supported curl-compatible flags on the given flag set. Call this i
 func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error)
 ```
 
-Builds an `*http.Request` from the flags set on the command. The first positional argument is used as the URL if `--url` is not set. Returns an error if `--request` and URL are both missing.
+Builds an `*http.Request` from the flags set on the command. The first positional argument is used as the URL if `--url` is not set; a missing scheme defaults to `http://` (see `NormalizeURL`). Returns an error if `--request` and URL are both missing.
 
 Supported flags include: `--request`/`-X`, `--url`, `--header`/`-H`, `--data`/`-d`, `--data-binary`, `--data-raw`, `--data-urlencode`, `--form`/`-F`, `--json`, `--user`/`-u`, `--oauth2-bearer`, `--user-agent`/`-A`, `--referer`/`-e`, `--cookie`/`-b`, `--head`/`-I`, `--get`/`-G`, `--compressed`, `--range`/`-r`.
+
+```go
+func NormalizeURL(raw string) (string, error)
+```
+
+Adds a default scheme to a URL that has none: `http://`, or `https://` when the port is 443. It handles `host`, `host:port`, `host:port/path` and IPv6 literals, and returns URLs that already have a `scheme://` unchanged. For example `localhost:5000` becomes `http://localhost:5000` (where `url.Parse` would read `localhost` as the scheme) and `[::1]:8080/x` becomes `http://[::1]:8080/x`. It does no network probe. `BuildRequest` applies it to the URL, and it is exported so other commands can normalize a bare host.
 
 ```go
 func BuildClient(cmd *cobra.Command, opts ...ClientOption) (*http.Client, error)
