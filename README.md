@@ -114,7 +114,9 @@ Builds an `*http.Client` from the flags set on the command. Unlike the default G
 
 Like curl, no overall timeout is applied by default. Embedders can set a fallback with `cobracurl.WithDefaultTimeout(d)`; `--max-time` still takes precedence.
 
-Supported flags include: `--insecure`/`-k`, `--location`/`-L`, `--max-redirs`, `--max-time`/`-m`, `--connect-timeout`, `--proxy`/`-x`.
+Supported flags include: `--insecure`/`-k`, `--location`/`-L`, `--max-redirs`, `--max-time`/`-m`, `--connect-timeout`, `--proxy`/`-x`, `--noproxy`.
+
+`--noproxy` takes a comma-separated list of hosts that bypass the proxy, as in curl: a host name matches itself and its subdomains, IP addresses and CIDR ranges are accepted, and `*` bypasses the proxy for every host.
 
 ```go
 func BuildRateLimiter(cmd *cobra.Command) (*rate.Limiter, error)

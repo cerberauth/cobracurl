@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -109,6 +110,10 @@ func BuildClient(cmd *cobra.Command, opts ...ClientOption) (*http.Client, error)
 		transport.Proxy = http.ProxyURL(proxyURL)
 	}
 
+	if noproxy, _ := cmd.Flags().GetString("noproxy"); noproxy != "" {
+		transport.Proxy = withNoProxy(transport.Proxy, noproxy)
+	}
+
 	client := &http.Client{Transport: transport}
 
 	if options.defaultTimeout > 0 {
@@ -136,4 +141,72 @@ func BuildClient(cmd *cobra.Command, opts ...ClientOption) (*http.Client, error)
 	}
 
 	return client, nil
+}
+
+// withNoProxy wraps a proxy func so requests to hosts listed in noproxy go
+// direct. noproxy follows curl semantics: a comma-separated list where each
+// entry is a host name (matching itself and its subdomains, with an optional
+// leading "." or "*."), an IP address or a CIDR range; "*" matches every host.
+// The wrapped func is typically the --proxy URL or http.ProxyFromEnvironment,
+// so NO_PROXY from the environment still applies on top of the flag.
+func withNoProxy(next func(*http.Request) (*url.URL, error), noproxy string) func(*http.Request) (*url.URL, error) {
+	var (
+		all    bool
+		hosts  []string
+		ips    []net.IP
+		ranges []*net.IPNet
+	)
+	for _, entry := range strings.Split(noproxy, ",") {
+		entry = strings.ToLower(strings.TrimSpace(entry))
+		switch {
+		case entry == "":
+			continue
+		case entry == "*":
+			all = true
+		case strings.Contains(entry, "/"):
+			if _, ipNet, err := net.ParseCIDR(entry); err == nil {
+				ranges = append(ranges, ipNet)
+			}
+		case net.ParseIP(strings.Trim(entry, "[]")) != nil:
+			ips = append(ips, net.ParseIP(strings.Trim(entry, "[]")))
+		default:
+			hosts = append(hosts, strings.TrimPrefix(strings.TrimPrefix(entry, "*"), "."))
+		}
+	}
+
+	bypass := func(host string) bool {
+		if all {
+			return true
+		}
+		host = strings.TrimSuffix(strings.ToLower(host), ".")
+		if ip := net.ParseIP(host); ip != nil {
+			for _, candidate := range ips {
+				if candidate.Equal(ip) {
+					return true
+				}
+			}
+			for _, ipNet := range ranges {
+				if ipNet.Contains(ip) {
+					return true
+				}
+			}
+			return false
+		}
+		for _, h := range hosts {
+			if host == h || strings.HasSuffix(host, "."+h) {
+				return true
+			}
+		}
+		return false
+	}
+
+	return func(req *http.Request) (*url.URL, error) {
+		if bypass(req.URL.Hostname()) {
+			return nil, nil
+		}
+		if next == nil {
+			return nil, nil
+		}
+		return next(req)
+	}
 }

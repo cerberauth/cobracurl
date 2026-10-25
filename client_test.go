@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"math/big"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -338,6 +339,94 @@ func TestBuildClientDefaultTimeout(t *testing.T) {
 		client, err := BuildClient(&cobra.Command{}, WithDefaultTimeout(0))
 		require.NoError(t, err)
 		assert.Equal(t, time.Duration(0), client.Timeout)
+	})
+}
+
+func TestBuildClientNoproxy(t *testing.T) {
+	proxyFor := func(t *testing.T, transport *http.Transport, rawURL string) string {
+		t.Helper()
+		req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+		require.NoError(t, err)
+		u, err := transport.Proxy(req)
+		require.NoError(t, err)
+		if u == nil {
+			return ""
+		}
+		return u.Host
+	}
+
+	build := func(t *testing.T, proxy, noproxy string) *http.Transport {
+		t.Helper()
+		cmd := &cobra.Command{}
+		cmd.Flags().String("proxy", proxy, "")
+		cmd.Flags().String("noproxy", noproxy, "")
+		client, err := BuildClient(cmd)
+		require.NoError(t, err)
+		return client.Transport.(*http.Transport)
+	}
+
+	tests := []struct {
+		name     string
+		noproxy  string
+		url      string
+		expected string
+	}{
+		{"listed host goes direct", "example.com", "http://example.com/x", ""},
+		{"other host uses proxy", "example.com", "http://other.com/x", "p:8080"},
+		{"subdomain of listed host goes direct", "example.com", "http://api.example.com", ""},
+		{"suffix without dot boundary uses proxy", "example.com", "http://notexample.com", "p:8080"},
+		{"leading dot matches subdomain", ".example.com", "http://api.example.com", ""},
+		{"wildcard prefix matches subdomain", "*.example.com", "http://api.example.com", ""},
+		{"multiple entries with spaces", "a.com, example.com ,b.com", "http://example.com", ""},
+		{"host match is case insensitive", "Example.COM", "http://example.com", ""},
+		{"star bypasses every host", "*", "http://other.com", ""},
+		{"port in URL is ignored", "example.com", "http://example.com:8443", ""},
+		{"IP entry", "10.0.0.1", "http://10.0.0.1:80", ""},
+		{"other IP uses proxy", "10.0.0.1", "http://10.0.0.2", "p:8080"},
+		{"CIDR entry", "10.0.0.0/8", "http://10.1.2.3", ""},
+		{"outside CIDR uses proxy", "10.0.0.0/8", "http://11.1.2.3", "p:8080"},
+		{"IPv6 entry", "::1", "http://[::1]:8080", ""},
+		{"empty entries ignored", ",,", "http://example.com", "p:8080"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := build(t, "http://p:8080", tt.noproxy)
+			assert.Equal(t, tt.expected, proxyFor(t, transport, tt.url))
+		})
+	}
+
+	t.Run("without noproxy proxy applies to all hosts", func(t *testing.T) {
+		transport := build(t, "http://p:8080", "")
+		assert.Equal(t, "p:8080", proxyFor(t, transport, "http://example.com"))
+	})
+
+	t.Run("falls through to the wrapped proxy func", func(t *testing.T) {
+		// http.ProxyFromEnvironment caches the environment on first use, so
+		// wrap a stub rather than relying on env vars here.
+		stub := func(*http.Request) (*url.URL, error) { return url.Parse("http://env-proxy:3128") }
+		proxy := withNoProxy(stub, "example.com")
+
+		direct, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+		require.NoError(t, err)
+		u, err := proxy(direct)
+		require.NoError(t, err)
+		assert.Nil(t, u)
+
+		proxied, err := http.NewRequest(http.MethodGet, "http://other.com", nil)
+		require.NoError(t, err)
+		u, err = proxy(proxied)
+		require.NoError(t, err)
+		require.NotNil(t, u)
+		assert.Equal(t, "env-proxy:3128", u.Host)
+	})
+
+	t.Run("nil wrapped proxy func means direct", func(t *testing.T) {
+		proxy := withNoProxy(nil, "example.com")
+		req, err := http.NewRequest(http.MethodGet, "http://other.com", nil)
+		require.NoError(t, err)
+		u, err := proxy(req)
+		require.NoError(t, err)
+		assert.Nil(t, u)
 	})
 }
 
