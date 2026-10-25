@@ -3,8 +3,10 @@ package cobracurl
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -12,6 +14,44 @@ import (
 
 const DefaultUserAgent = "cobracurl (+https://github.com/cerberauth/cobracurl)"
 
+var schemePrefix = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*://`)
+
+// NormalizeURL adds a default scheme to raw when it has none, and otherwise
+// returns it unchanged. A bare host, "host:port", "host:port/path" or IPv6
+// literal such as "[::1]:8080" gets "http://", except when the port is 443,
+// which gets "https://". No network probe is made.
+//
+// Unlike url.Parse, "localhost:5000" is not read as scheme "localhost": only a
+// "scheme://" prefix counts as a scheme. Returns an error if raw is empty or
+// the result is not a valid URL with a host.
+func NormalizeURL(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", ErrMissingRequiredFields
+	}
+
+	candidate := raw
+	if !schemePrefix.MatchString(raw) {
+		candidate = "http://" + strings.TrimPrefix(raw, "//")
+	}
+
+	u, err := url.Parse(candidate)
+	if err != nil {
+		return "", fmt.Errorf("invalid url %q: %w", raw, err)
+	}
+	if u.Hostname() == "" {
+		return "", fmt.Errorf("invalid url %q: missing host", raw)
+	}
+
+	if candidate != raw && u.Port() == "443" {
+		candidate = "https://" + strings.TrimPrefix(candidate, "http://")
+	}
+	return candidate, nil
+}
+
+// BuildRequest builds an *http.Request from cobra command flags. The URL, from
+// --url or the first argument, is passed through NormalizeURL, so a missing
+// scheme defaults to http://.
 func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 	method, _ := cmd.Flags().GetString("request")
 	rawURL, _ := cmd.Flags().GetString("url")
@@ -52,6 +92,11 @@ func BuildRequest(cmd *cobra.Command, args []string) (*http.Request, error) {
 
 	if rawURL == "" {
 		return nil, ErrMissingRequiredFields
+	}
+
+	rawURL, err := NormalizeURL(rawURL)
+	if err != nil {
+		return nil, err
 	}
 
 	var body string
@@ -228,6 +273,9 @@ func BuildRequestHeaders(cmd *cobra.Command) (http.Header, []*http.Cookie, error
 	}
 
 	rawURL, _ := cmd.Flags().GetString("url")
+	if normalized, err := NormalizeURL(rawURL); err == nil {
+		rawURL = normalized
+	}
 	isSecure := strings.HasPrefix(strings.ToLower(rawURL), "https://")
 	if cookieStrs, _ := cmd.Flags().GetStringArray("cookie"); len(cookieStrs) > 0 {
 		for _, cookieStr := range cookieStrs {
